@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Fullscreen Loop + Effetto</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background-color: black;
+    }
+
+    /* Video di base 1920x1080 centrato */
+    #baseVideo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 1920px;
+      height: 1080px;
+      transform: translate(-50%, -50%);
+      object-fit: cover;
+    }
+
+    /* Pulsante “+” */
+    #plusButton {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      font-size: 32px;
+      border: none;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.8);
+      color: black;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.1s ease;
+      z-index: 20;
+      user-select: none;
+    }
+    #plusButton:hover { background-color: rgba(255, 255, 255, 1); }
+    #plusButton:active { transform: scale(0.98); }
+
+    /* Player effetto sopra al video base */
+    .effetto-player {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 1920px;
+      height: 1080px;
+      transform: translate(-50%, -50%);
+      object-fit: cover;
+      z-index: 10; /* sopra il video base, sotto il bottone */
+      pointer-events: none; /* evita di bloccare clic futuri sul bottone */
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <!-- Video di background in loop, senza audio e senza controlli -->
+  <video id="baseVideo" autoplay loop playsinline muted preload="auto">
+    <source src="loop.mp4" type="video/mp4">
+    Il tuo browser non supporta la riproduzione video.
+  </video>
+
+  <!-- Pulsante “+” -->
+  <button id="plusButton" aria-label="Riproduci effetto">+</button>
+
+  <script>
+    let effettoInRiproduzione = false;
+
+    const plusBtn = document.getElementById('plusButton');
+
+    plusBtn.addEventListener('click', () => {
+      if (effettoInRiproduzione) return; // Evita più istanze sovrapposte
+      effettoInRiproduzione = true;
+
+      // Crea il player dell'effetto
+      const v = document.createElement('video');
+      v.className = 'effetto-player';
+      v.muted = true;             // niente audio
+      v.autoplay = true;          // parte subito (permesso perché muted)
+      v.playsInline = true;
+      v.loop = false;             // riproduzione singola
+      v.preload = 'auto';         // carica subito
+      v.setAttribute('controls', ''); // opzionale: non verranno mostrati perché non stilizzati
+      v.removeAttribute('controls');  // garantisce nessun controllo visibile
+
+      const source = document.createElement('source');
+      source.src = 'effetto.mp4';
+      source.type = 'video/mp4';
+      v.appendChild(source);
+
+      // Al termine: rimuovi e libera il flag
+      const cleanup = () => {
+        v.removeEventListener('ended', cleanup);
+        v.removeEventListener('error', cleanup);
+        if (v.parentNode) v.parentNode.removeChild(v);
+        effettoInRiproduzione = false;
+      };
+      v.addEventListener('ended', cleanup);
+      v.addEventListener('error', cleanup);
+
+      // Inserisci sopra al video base
+      document.body.appendChild(v);
+
+      // In alcuni browser serve forzare play con Promise
+      const tryPlay = v.play();
+      if (tryPlay && typeof tryPlay.then === 'function') {
+        tryPlay.catch(() => {
+          // Se l'autoplay fallisce (non dovrebbe perché muted),
+          // ritenta al prossimo click o mostrare un fallback qui se vuoi.
+          cleanup();
+        });
+      }
+    });
+  </script>
+</body>
+</html>
